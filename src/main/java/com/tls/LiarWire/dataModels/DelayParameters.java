@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class DelayParameters {
 
+    private String type;
+
     private int avg;
 
     private int p90;

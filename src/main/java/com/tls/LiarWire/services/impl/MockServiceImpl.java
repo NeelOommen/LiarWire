@@ -2,6 +2,7 @@ package com.tls.LiarWire.services.impl;
 
 import com.tls.LiarWire.HttpUtilities;
 import com.tls.LiarWire.entity.MockApiConfig;
+import com.tls.LiarWire.factories.DelayServiceFactory;
 import com.tls.LiarWire.factories.ResponseProcessorFactory;
 import com.tls.LiarWire.repositories.MockRepository;
 import com.tls.LiarWire.services.MockService;
@@ -19,7 +20,8 @@ import reactor.core.publisher.Mono;
 public class MockServiceImpl implements MockService {
 
     private final MockRepository mockRepository;
-    private final ResponseProcessorFactory factory;
+    private final ResponseProcessorFactory responseProcessorFactory;
+    private final DelayServiceFactory delayServiceFactory;
 
     @Override
     public Mono<String> getConfig(String endpoint) {
@@ -35,7 +37,16 @@ public class MockServiceImpl implements MockService {
 
         return config.map(apiConfig -> {
             log.debug("something");
-            return factory.getProcessor(apiConfig.getResponseContentType()).generateResponse(apiConfig, request);
+
+            if(null != apiConfig.getDelay()){
+                try {
+                    delayServiceFactory.getDelayService(apiConfig.getDelay().getType()).delayResponse(apiConfig);
+                } catch (InterruptedException e) {
+                    log.error("Thread was interrupted during delay, proceeding with response");
+                }
+            }
+
+            return responseProcessorFactory.getProcessor(apiConfig.getResponseContentType()).generateResponse(apiConfig, request);
         });
     }
 }
