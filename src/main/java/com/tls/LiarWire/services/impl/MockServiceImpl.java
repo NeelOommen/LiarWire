@@ -2,6 +2,7 @@ package com.tls.LiarWire.services.impl;
 
 import com.tls.LiarWire.HttpUtilities;
 import com.tls.LiarWire.entity.MockApiConfig;
+import com.tls.LiarWire.factories.ResponseProcessorFactory;
 import com.tls.LiarWire.repositories.MockRepository;
 import com.tls.LiarWire.services.MockService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import reactor.core.publisher.Mono;
 public class MockServiceImpl implements MockService {
 
     private final MockRepository mockRepository;
+    private final ResponseProcessorFactory factory;
 
     @Override
     public Mono<String> getConfig(String endpoint) {
@@ -32,9 +34,8 @@ public class MockServiceImpl implements MockService {
         Mono<MockApiConfig> config = mockRepository.findByEndpointAndMethod(request.getURI().getPath(), request.getMethod().toString());
 
         return config.map(apiConfig -> {
-            ResponseEntity<Object> response = new ResponseEntity<>(apiConfig.getResponse(), HttpUtilities.mapConfigToHttpResponseStatus(apiConfig));
-
-            return response;
+            log.debug("something");
+            return factory.getProcessor(apiConfig.getResponseContentType()).generateResponse(apiConfig, request);
         });
     }
 }
