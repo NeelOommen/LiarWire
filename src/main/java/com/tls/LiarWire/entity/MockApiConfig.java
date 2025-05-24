@@ -1,11 +1,13 @@
 package com.tls.LiarWire.entity;
 
-import com.tls.LiarWire.dataModels.DelayParameters;
+import com.tls.LiarWire.dataModels.impl.DelayParameters;
 import com.mongodb.lang.Nullable;
+import com.tls.LiarWire.dataModels.impl.ResponseConfig;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
 import java.util.Map;
 
 @Document(collection = "Mock-APIS")
@@ -24,14 +26,9 @@ public class MockApiConfig {
     private String request;
 
     //Response Configs
+    private String responsePickerType;
 
-    private String responseHttpStatus;
-
-    private String responseContentType;
-
-    private Map<String, String> responseHeaders;
-
-    private String response;
+    List<ResponseConfig> responseList;
 
     //Behaviour Parameters
 

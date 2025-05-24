@@ -1,4 +1,4 @@
-package com.tls.LiarWire.dataModels;
+package com.tls.LiarWire.dataModels.impl;
 
 import lombok.Data;
 

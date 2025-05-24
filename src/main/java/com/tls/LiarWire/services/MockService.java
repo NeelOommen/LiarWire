@@ -6,8 +6,6 @@ import reactor.core.publisher.Mono;
 
 public interface MockService {
 
-    Mono<String> getConfig(String endpoint);
-
     Mono<ResponseEntity<Object>> executeMock(ServerHttpRequest request);
 
 }

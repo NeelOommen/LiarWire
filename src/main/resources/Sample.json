@@ -1,0 +1,40 @@
+{
+  "_id": "/test",
+  "httpMethod": "GET",
+
+  "requestHeaders": {
+    "Authorization": "Bearer abc123",
+    "Accept": "application/json"
+  },
+  "request": "{\"id\":123}",
+
+  "responsePickerType": "weightedProbabilityPicker",
+  "responseList": [
+    {
+      "probability": 0.5,
+      "responseHttpStatus": "202",
+      "responseContentType": "json",
+      "responseHeaders": {
+        "Content-Type": "application/json"
+      },
+      "response": "{\"message\":\"success\"}"
+    },
+    {
+      "probability": 0.5,
+      "responseHttpStatus": "200",
+      "responseContentType": "json",
+      "responseHeaders": {
+        "Content-Type": "application/json"
+      },
+      "response": "{\"message\":\"another success\"}"
+    }
+  ],
+
+  "delay": {
+    "avg": 250,
+    "p90": 500,
+    "p95": 600,
+    "p99": 700,
+    "type": "avg"
+  }
+}
