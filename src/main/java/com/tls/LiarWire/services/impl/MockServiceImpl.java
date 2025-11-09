@@ -1,12 +1,14 @@
 package com.tls.LiarWire.services.impl;
 
-import com.tls.LiarWire.HttpUtilities;
+import com.tls.LiarWire.exceptions.InvalidMockConfig;
+import com.tls.LiarWire.Utils;
 import com.tls.LiarWire.dataModels.impl.ResponseConfig;
-import com.tls.LiarWire.entity.MockApiConfig;
+import com.tls.LiarWire.exceptions.MockNotFound;
 import com.tls.LiarWire.factories.DelayServiceFactory;
 import com.tls.LiarWire.factories.ResponsePickerFactory;
 import com.tls.LiarWire.factories.ResponseProcessorFactory;
 import com.tls.LiarWire.repositories.MockRepository;
+import com.tls.LiarWire.services.EndpointMatcher;
 import com.tls.LiarWire.services.MockService;
 import com.tls.LiarWire.services.ProbabilityPicker;
 import lombok.RequiredArgsConstructor;
@@ -26,33 +28,37 @@ public class MockServiceImpl implements MockService {
     private final ResponseProcessorFactory responseProcessorFactory;
     private final DelayServiceFactory delayServiceFactory;
     private final ResponsePickerFactory responsePickerFactory;
+    private final EndpointMatcher endpointMatcher;
 
     @Override
     public Mono<ResponseEntity<Object>> executeMock(ServerHttpRequest request) {
-        try{
-            Mono<MockApiConfig> config = mockRepository.findByEndpointAndMethod(request.getURI().getPath(), request.getMethod().toString());
-
-            return config.map(apiConfig -> {
-                log.debug("something");
-
-                if(null != apiConfig.getDelay()){
-                    try {
-                        delayServiceFactory.getDelayService(apiConfig.getDelay().getType()).delayResponse(apiConfig);
-                    } catch (InterruptedException e) {
-                        log.error("Thread was interrupted during delay, proceeding with response");
+        String apiConfigKey = Utils.getKeyWithMethodAndEndpoint(request.getMethod().name(), request.getURI().getPath());
+        return endpointMatcher.getIdForPath(request.getMethod().name(), request.getURI().getPath())
+                .flatMap(mockRepository::findByObjectId)
+                .map(apiConfig -> {
+                    if (null != apiConfig.getDelay()) {
+                        try {
+                            delayServiceFactory.getDelayService(apiConfig.getDelay().getType()).delayResponse(apiConfig);
+                        } catch (InterruptedException e) {
+                            log.error("Thread was interrupted during delay, proceeding with response");
+                        }
                     }
-                }
 
-                ProbabilityPicker responsePicker = responsePickerFactory.getProcessor(apiConfig.getResponsePickerType());
-
-                ResponseConfig responseConfig = responsePicker.pickObject(apiConfig.getResponseList());
-
-                return responseProcessorFactory.getProcessor(responseConfig.getResponseContentType()).generateResponse(responseConfig, request);
-            });
-        }
-        catch (Exception e){
-            log.error("Error occured while executing mock", e);
-            return Mono.just(ResponseEntity.internalServerError().body("Error while executing mock"));
-        }
+                    ProbabilityPicker responsePicker = responsePickerFactory.getProcessor(apiConfig.getResponsePickerType());
+                    ResponseConfig responseConfig = responsePicker.pickObject(apiConfig.getResponseList());
+                    return responseProcessorFactory.getProcessor(responseConfig.getResponseContentType()).generateResponse(responseConfig, request);
+                })
+                .onErrorResume(MockNotFound.class, mnc -> {
+                    log.error("Mock Config not found: {}", mnc.getMessage());
+                    return Mono.just(ResponseEntity.badRequest().body("Mock not found for path: " + apiConfigKey));
+                })
+                .onErrorResume(InvalidMockConfig.class, imc -> {
+                    log.error("Invalid mock config: {}", imc.getMessage());
+                    return Mono.just(ResponseEntity.badRequest().body("Error while executing mock: " + apiConfigKey));
+                })
+                .onErrorResume(Exception.class, e -> {
+                    log.error("Error occured while executing mock", e);
+                    return Mono.just(ResponseEntity.internalServerError().body("Error while executing mock: " + apiConfigKey));
+                });
     }
 }

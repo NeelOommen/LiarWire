@@ -20,7 +20,7 @@ public class MockController {
     @RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST})
     public Mono<ResponseEntity<Object>> executeMock(ServerWebExchange exchange){
         String uri = exchange.getRequest().getURI().getPath();
-        log.debug("Endpoint: {}", uri);
+        log.info("Endpoint: {}", uri);
         return mockService.executeMock(exchange.getRequest());
     }
 
