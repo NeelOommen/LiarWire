@@ -1,0 +1,33 @@
+{
+  "_id": {
+    "$oid": "6910da57f163b31f812ca7ab"
+  },
+  "endpoint": "/test/:id",
+  "pathMatchingRequired": true,
+  "pathMatchingRegex": "^/test/[^/]+$",
+  "httpMethod": "POST",
+  "requestHeaders": {
+    "Authorization": "Bearer abc123",
+    "Accept": "application/json"
+  },
+  "request": "{\"id\":123}",
+  "responsePickerType": "fixedPicker",
+  "responseList": [
+    {
+      "probability": 0.5,
+      "responseHttpStatus": "202",
+      "responseContentType": "json",
+      "responseHeaders": {
+        "Content-Type": "application/json"
+      },
+      "response": "{\"message\":\"success\"}"
+    }
+  ],
+  "delay": {
+    "avg": 0,
+    "p90": 0,
+    "p95": 600,
+    "p99": 700,
+    "type": "avg"
+  }
+}
