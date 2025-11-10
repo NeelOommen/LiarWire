@@ -8,6 +8,7 @@ import com.tls.LiarWire.factories.DelayServiceFactory;
 import com.tls.LiarWire.factories.ResponsePickerFactory;
 import com.tls.LiarWire.factories.ResponseProcessorFactory;
 import com.tls.LiarWire.repositories.MockRepository;
+import com.tls.LiarWire.services.DelayService;
 import com.tls.LiarWire.services.EndpointMatcher;
 import com.tls.LiarWire.services.MockService;
 import com.tls.LiarWire.services.ProbabilityPicker;
@@ -17,6 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuples;
+
+import java.time.Duration;
 
 
 @Slf4j
@@ -36,14 +40,16 @@ public class MockServiceImpl implements MockService {
         return endpointMatcher.getIdForPath(request.getMethod().name(), request.getURI().getPath())
                 .flatMap(mockRepository::findByObjectId)
                 .map(apiConfig -> {
+                    long delayMs = 0;
                     if (null != apiConfig.getDelay()) {
-                        try {
-                            delayServiceFactory.getDelayService(apiConfig.getDelay().getType()).delayResponse(apiConfig);
-                        } catch (InterruptedException e) {
-                            log.error("Thread was interrupted during delay, proceeding with response");
-                        }
+                        DelayService delayService = delayServiceFactory.getDelayService(apiConfig.getDelay().getType());
+                        double delayPercentile = delayService.getRandomPercentage();
+                        delayMs = delayService.getDelayinMillisBasedOnPercentile(apiConfig, delayPercentile);
                     }
-
+                    return Tuples.of(apiConfig, delayMs);
+                })
+                .flatMap(tuple -> Mono.delay(Duration.ofMillis(tuple.getT2())).thenReturn(tuple.getT1()))
+                .map(apiConfig -> {
                     ProbabilityPicker responsePicker = responsePickerFactory.getProcessor(apiConfig.getResponsePickerType());
                     ResponseConfig responseConfig = responsePicker.pickObject(apiConfig.getResponseList());
                     return responseProcessorFactory.getProcessor(responseConfig.getResponseContentType()).generateResponse(responseConfig, request);
